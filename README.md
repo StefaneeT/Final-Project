@@ -8,11 +8,17 @@ The purpose of this app is to explore the Student's Performance data to see if s
 # A list of packages needed to run the app.
 
 • `dplyr()`
+
 • `caret()`
+
 • `shiny()`
+
 • `tree()`
+
 • `stargazer()`
+
 • `tidyverse()`
+
 • `shinycssloaders()`
 
 # A line of code to easily install the packages used
