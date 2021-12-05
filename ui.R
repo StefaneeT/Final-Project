@@ -578,7 +578,7 @@ p("Here users can use the Linear Regression Model for Prediction of the response
 selectizeInput(
     "PredVars", "Select Predictors:", choices = names(data), multiple = TRUE),  
 
-actionButton("action2", label = "Fit All Models"),
+actionButton("action2", label = "Run"),
 
 mainPanel(
     tableOutput("Pred"),
