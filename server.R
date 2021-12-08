@@ -1,3 +1,14 @@
+##########Static
+require(dplyr)
+require(httr)
+require(ggplot2)
+require(readxl)
+library(shinythemes)
+#install.packages("caTools")
+library(caTools) 
+#install.packages("vtable")
+library(vtable)
+require(caret)
 library(shiny)
 library(shinydashboard)
 library(maps)
@@ -12,6 +23,181 @@ library(stargazer)
 library(ggplot2)
 library(tree) 
 library(caret)
+data<- read.csv("C:/Users/Stefa/OneDrive/Documents/test_scores.csv")
+data <- data %>% select(-school, -classroom, -student_id)
+intdata<- read.csv("C:/Users/Stefa/OneDrive/Documents/test_scores.csv")
+intdata<- intdata %>% select(-school, -classroom, -student_id)
+
+
+###################
+#Setting Up Data for Modeling
+###################
+
+#data<- read.csv("C:/Users/Stefa/OneDrive/Documents/test_scores.csv")
+
+intdata$school_setting <- as.integer(if_else(data$school_setting == "Rural", 1,
+                                             if_else(data$school_setting == "Suburban", 2,
+                                                     if_else(data$school_setting == "Urban", 3, 99))))
+
+intdata$school_type <- as.integer(if_else(data$school_type == "Non-public", 1,
+                                          if_else(data$school_type == "Public", 0, 99)))
+
+intdata$teaching_method <- as.integer(if_else(data$teaching_method == "Experimental", 1,
+                                              if_else(data$teaching_method == "Standard", 0, 99)))
+
+intdata$gender <- as.integer(if_else(data$gender == "Female", 1,
+                                     if_else(data$gender == "Male", 0, 99)))
+
+intdata$lunch <- as.integer(if_else(data$lunch == "Qualifies for reduced/free lunch", 1,
+                                    if_else(data$lunch == "Does not qualify", 2, 99)))
+
+
+
+#Table for Numerical Summaries
+
+#1.Posttest vs. Lunch
+table(data$posttest, data$lunch)
+
+#2.Posttest vs. School Setting
+table(data$posttest, data$school_setting)
+
+
+#3.Posttest vs. School Type
+table(data$posttest, data$school_type)
+
+#4.Posttest vs. Teaching Method
+table(data$posttest, data$teaching_method)
+
+#4.Posttest vs. Number of Students
+table(data$posttest, data$n_student)
+
+#5.Posttest vs. Gender
+table(data$posttest, data$gender)
+
+#7.Posttest vs. Pretest
+table(data$posttest, data$pretest)
+
+
+
+
+
+#intdata<- data
+
+
+
+
+
+#TO HAVE GRAPHS-data file is data
+#data<- read.csv("C:/Users/Stefa/OneDrive/Documents/test_scores.csv")
+
+
+data<- data %>% mutate(data, pretest = ifelse(pretest %in% 60:69, "D",
+                                              ifelse(pretest %in% 70:79, "C",
+                                                     ifelse(pretest %in% 80:89, "B",
+                                                            ifelse(pretest %in% 90:99, "A", "F")))))
+
+data<- data %>% mutate(data, posttest = ifelse(posttest %in% 60:69, "D",
+                                               ifelse(posttest %in% 70:79, "C",
+                                                      ifelse(posttest %in% 80:89, "B",
+                                                             ifelse(posttest %in% 90:99, "A", "F")))))
+
+#data <- data %>% select(-school, -classroom, -student_id)
+#intdata<- data
+#####GRAPHS######
+#Lunch vs. Posttest-2
+data$posttest<- factor(data$posttest, levels = c("A", "B", "C", "D", "F"))
+plot1 <- ggplot(data = data, aes(x= posttest))
+plot1 + geom_bar(aes(fill= lunch), position = "dodge") + labs(x = "posttest", y = "Count") 
+
+#Posttest vs. School_Setting-3
+data$posttest<- factor(data$posttest, levels = c("A", "B", "C", "D", "F"))
+plot1 <- ggplot(data = data, aes(x= posttest))
+plot1 + geom_bar(aes(fill= school_setting), position = "dodge") + labs(x = "posttest", y = "Count") 
+
+#Posttest vs. school_type
+data$posttest<- factor(data$posttest, levels = c("A", "B", "C", "D", "F"))
+plot1 <- ggplot(data = data, aes(x= posttest))
+plot1 + geom_bar(aes(fill= school_type), position = "dodge") + labs(x = "posttest", y = "Count") 
+
+
+#Posttest vs. teaching_method
+data$posttest<- factor(data$posttest, levels = c("A", "B", "C", "D", "F"))
+plot1 <- ggplot(data = data, aes(x= posttest))
+plot1 + geom_bar(aes(fill= teaching_method), position = "dodge") + labs(x = "posttest", y = "Count") 
+
+#Put this first for a better flow. Posttest vs. n_students
+data$posttest<- factor(data$posttest, levels = c("A", "B", "C", "D", "F"))
+plot1 <- ggplot(data = data, aes(x= posttest))
+plot1 + geom_bar(aes(fill= n_student), position = "dodge") + labs(x = "posttest", y = "Count") 
+
+
+#Posttest vs. gender
+data$posttest<- factor(data$posttest, levels = c("A", "B", "C", "D", "F"))
+plot1 <- ggplot(data = data, aes(x= posttest))
+plot1 + geom_bar(aes(fill= gender), position = "dodge") + labs(x = "posttest", y = "Count") 
+
+#Posttest vs. Pretest
+data$posttest<- factor(data$posttest, levels = c("A", "B", "C", "D", "F"))
+plot1 <- ggplot(data = data, aes(x= posttest))
+plot1 + geom_bar(aes(fill= pretest), position = "dodge") + labs(x = "posttest", y = "Count") 
+
+
+
+
+
+
+
+
+
+###########
+#Modeling
+###########
+
+set.seed(123)
+dt = sort(sample(nrow(intdata), nrow(intdata) * .7))
+train<- intdata[dt,]
+test<- intdata[-dt,]
+
+
+#1. Linear Model
+lmmodel <- lm(posttest~., data=train, trControl = trainControl(method = "cv", number = 5))
+summary(lmmodel)
+
+
+
+#2. Random Forest Model
+rfmodel <- train(posttest ~ school_setting + school_type + teaching_method + n_student + gender + lunch + pretest, data = train,
+                 method = "rf", trControl = trainControl(method= "cv", number = 5),
+                 preProcess = c("center", "scale"), tuneGrid = data.frame(mtry = 1:8))
+print(rfmodel)
+
+#3. Boosted Tree Model
+library(tree) 
+
+gbmGrid <-  expand.grid(interaction.depth = 1:4,
+                        n.trees = c(25, 50, 100, 150, 200),
+                        shrinkage = 0.1,
+                        n.minobsinnode = 10)
+nrow(gbmGrid)
+fitControl <- trainControl(method = "repeatedcv", number = 5, repeats = 3)
+boostFit <- train(posttest ~ school_setting + school_type + teaching_method + n_student + gender + lunch + pretest,
+                  data = train,
+                  preProcess = c("center", "scale"),
+                  trControl = fitControl,
+                  method = "gbm",
+                  tuneGrid = gbmGrid)
+
+print(boostFit)
+
+boostPred <- predict(boostFit, newdata = test)
+boostRMSE <- sqrt(mean((boostPred-test$posttest)^2))
+boostRMSE
+############################################End Static
+
+
+
+
+
 
 
 
@@ -351,5 +537,8 @@ output$downloadData <- downloadHandler(
 
     })#End of Shiny Server Function
     
+
+    
+
 
     
